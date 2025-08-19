@@ -4,6 +4,8 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import Login from './pages/Login'
 import AdminDashboard from './pages/AdminDashboard'
 import StudentDashboard from './pages/StudentDashboard'
+import StudentSettings from './pages/StudentSettings'
+import StudentShell from './layouts/StudentShell'
 import Unauthorized from './pages/Unauthorized'
 
 export default function AppRouter() {
@@ -19,7 +21,10 @@ export default function AppRouter() {
           </Route>
 
           <Route element={<ProtectedRoute allow={["student"]} />}>
-            <Route path="/student" element={<StudentDashboard />} />
+            <Route element={<StudentShell />}>
+              <Route path="/student" element={<StudentDashboard />} />
+              <Route path="/student/settings" element={<StudentSettings />} />
+            </Route>
           </Route>
 
           <Route path="/unauthorized" element={<Unauthorized />} />

@@ -32,28 +32,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const role: UserRole | null = profile?.role ?? null
 
   useEffect(() => {
+    let mounted = true
+
     const init = async () => {
       const { data } = await supabase.auth.getSession()
+      if (!mounted) return
       setSession(data.session)
       setUser(data.session?.user ?? null)
-      setLoading(false)
+      // do not set loading false yet; wait for profile phase
     }
+
     init()
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event: any, newSession: Session | null) => {
+      if (!mounted) return
       setSession(newSession)
       setUser(newSession?.user ?? null)
+      // when user changes, profile effect will re-run
     })
 
     return () => {
+      mounted = false
       sub.subscription.unsubscribe()
     }
   }, [])
 
   useEffect(() => {
+    let active = true
+
     const loadProfile = async () => {
       if (!user) {
         setProfile(null)
+        setLoading(false)
         return
       }
       const { data, error } = await supabase
@@ -62,9 +72,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('user_id', user.id)
         .maybeSingle()
 
+      if (!active) return
+
       if (error) {
         console.error('Failed to load profile', error)
         setProfile(null)
+        setLoading(false)
         return
       }
 
@@ -75,6 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .insert({ user_id: user.id, role: 'student' })
           .select()
           .single()
+        if (!active) return
         if (insertError) {
           console.error('Failed to create profile', insertError)
           setProfile(null)
@@ -84,9 +98,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setProfile(data)
       }
+      setLoading(false)
     }
 
     loadProfile()
+
+    return () => {
+      active = false
+    }
   }, [user])
 
   const signInWithPassword = async (email: string, password: string) => {
